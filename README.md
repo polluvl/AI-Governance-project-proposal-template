@@ -95,8 +95,8 @@ LLM results: _to be added after the first real run._
 
 | Member | Share | Responsibilities |
 |---|---|---|
-| Лукашенко Поліна | 33.3% | Evaluation pipeline (`src/run_eval.py`, `src/llm_client.py`, `src/metrics.py`), repo setup, tests, reproducibility |
-| Мандрик Софія | 33.3% | Risk taxonomy and thresholds (`docs/taxonomy.md`, `configs/thresholds.json`), risk scoring and governance report (`src/risk_score.py`, `src/pipeline.py`), README |
-| Онопрієнко Дарина | 33.3% | Literature review, evaluation dataset (`data/`), human labelling (`src/label.py`), final report |
+| Лукашенко Поліна | 33.3% | Repo setup, evaluation pipeline (`src/run_eval.py`, `src/llm_client.py`, `src/metrics.py`), tests |
+| Мандрик Софія | 33.3% | Evaluation dataset (`data/`) |
+| Онопрієнко Дарина | 33.3% | Risk taxonomy and thresholds, risk scoring and governance report (`src/risk_score.py`, `src/pipeline.py`), README |
 
 All three members agree with this distribution.
