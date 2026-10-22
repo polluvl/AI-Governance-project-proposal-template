@@ -75,6 +75,7 @@ class LLMClient:
         self.temperature = temperature
         self.seed = seed
         self.max_tokens = max_tokens
+        self.unsupported = set()  # parameters the provider rejected; not sent again in this run
 
     def chat(self, system_prompt, user_prompt, retries=4):
         kwargs = {
@@ -88,13 +89,24 @@ class LLMClient:
         }
         if self.seed is not None:
             kwargs["seed"] = self.seed
+        for param in self.unsupported:
+            kwargs.pop(param, None)
         for attempt in range(retries):
             try:
                 response = self.client.chat.completions.create(**kwargs)
                 return (response.choices[0].message.content or "").strip()
             except Exception as error:  # noqa: BLE001 — providers raise different error types
-                if "seed" in str(error).lower() and "seed" in kwargs:
-                    kwargs.pop("seed")  # some providers do not support the seed parameter
+                message = str(error).lower()
+                # Some providers reject parameters we send by default; drop the rejected one and retry.
+                # e.g. newer Claude models only accept the default temperature.
+                dropped = False
+                for param in ("seed", "temperature"):
+                    if param in message and param in kwargs:
+                        kwargs.pop(param)
+                        self.unsupported.add(param)
+                        print(f"  (provider rejected '{param}', retrying without it)")
+                        dropped = True
+                if dropped:
                     continue
                 if attempt == retries - 1:
                     raise
