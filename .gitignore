@@ -12,7 +12,17 @@
 *.blg
 *.xdv
 *.pdf
-!example/example.pdf
+!docs/proposal/example/example.pdf
 
 .DS_Store
 *.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets — never commit API keys
+.env

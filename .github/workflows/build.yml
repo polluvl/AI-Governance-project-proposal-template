@@ -1,43 +1,54 @@
-name: Build PDF
+name: CI
 
 on:
   push:
   pull_request:
 
 jobs:
-  build:
+  proposal-pdf:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check example/ copies are in sync with root
+      - name: Check example/ copies are in sync with the proposal folder
+        working-directory: docs/proposal
         run: |
           diff ucuproposal.cls example/ucuproposal.cls
           diff .latexmkrc example/.latexmkrc
           diff -r assets example/assets
 
-      - name: Compile main.tex (XeLaTeX + BibTeX)
+      - name: Compile proposal (XeLaTeX + BibTeX)
         uses: xu-cheng/latex-action@v3
         with:
           root_file: main.tex
+          working_directory: docs/proposal
           latexmk_use_xelatex: true
 
       - name: Upload proposal PDF
         uses: actions/upload-artifact@v4
         with:
           name: proposal-pdf
-          path: main.pdf
+          path: docs/proposal/main.pdf
 
-      - name: Compile example/example.tex (XeLaTeX + BibTeX)
-        uses: xu-cheng/latex-action@v3
-        with:
-          root_file: example.tex
-          working_directory: example
-          latexmk_use_xelatex: true
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Upload example PDF
-        uses: actions/upload-artifact@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: example-pdf
-          path: example/example.pdf
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate dataset
+        run: |
+          if [ -f data/validate_dataset.py ]; then python data/validate_dataset.py; fi
+
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then python -m pytest -q; fi

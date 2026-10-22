@@ -1,185 +1,102 @@
-<p align="center">
-  <img src="assets/logo/uku_logo___seal_engl.png" alt="Ukrainian Catholic University" width="110">
-</p>
+# AI Governance & Assurance
 
-<h1 align="center">Semester Project Proposal Template</h1>
-<p align="center"><em>"Artificial Intelligence" Course — Ukrainian Catholic University</em></p>
+A practical technical framework for checking whether an AI system is safe enough to deploy.
+UCU course "Штучний інтелект", semester project 2026.
 
-<p align="center">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-</p>
+**Team:** Лукашенко Поліна, Мандрик Софія, Онопрієнко Дарина · **Mentor:** Шумський Дмитро
 
-A LaTeX template for writing your semester project proposal.
+## Problem
 
-## Three ways to use this template
+Organisations deploy LLM assistants on internal documents, but governance frameworks (NIST AI RMF, ISO/IEC 42001,
+EU AI Act) say *what* to control, not *how to measure it*. We build a reproducible pipeline that turns test
+results into measurable risks, risk levels and a deployment recommendation.
 
-Options 1 and 2 both run in Overleaf (no local install needed); option 3
-compiles on your own machine.
+**Input:** an AI system (model + system prompt + documents) and a set of test scenarios.
+**Output:** a governance report: risks found, a metric per risk, overall risk level, required controls, who approves,
+and a recommendation: *deploy* / *deploy with restrictions* / *do not deploy*.
 
-### Option 1: Overleaf via GitHub sync
+## How it works
 
-Best if your team already uses GitHub — keeps Overleaf and your repo
-in sync in both directions as you edit.
+```
+data/scenarios.jsonl ──► src/run_eval.py ──► src/metrics.py ──► src/risk_score.py ──► risk_report.md
+   (70 test prompts)     (ask the model)    (score answers)    (thresholds → levels)   (recommendation)
+                                    configs/baseline.json        configs/thresholds.json
+                                    configs/guardrail.json       docs/taxonomy.md
+```
 
-1. Get your own copy of this repository on GitHub (fork it, or use
-   GitHub's "Use this template" button).
-2. In Overleaf, go to **New Project → GitHub repo**. The first time you
-   do this, Overleaf will ask you to connect/authorize your GitHub
-   account:
+| Folder | What is inside |
+|---|---|
+| `data/` | Synthetic company documents, 14 planted "canary" secrets, 70 test scenarios — see [data/README.md](data/README.md) |
+| `configs/` | The two system setups we compare, and the risk thresholds |
+| `src/` | The pipeline (one file per step) |
+| `docs/taxonomy.md` | Risk → Test → Metric → Threshold → Control table with NIST mapping |
+| `results/` | Answers, scores and governance reports of each run |
+| `tests/` | Unit tests (`python -m pytest -q`) |
+| `docs/proposal/` | LaTeX source of our proposal |
 
-   ![Overleaf "New Project" menu with the "GitHub repo" import option highlighted](docs/images/overleaf-import-new-project-menu.png)
+**Use case 1:** an internal employee assistant for a fictional company. Its context contains all documents,
+including Confidential and Restricted ones (a RAG deployment without access control). We test two setups:
 
-   If you get stuck authorizing the connection, see
-   [Overleaf's GitHub sync docs](https://docs.overleaf.com/integrations-and-add-ons/git-integration-and-github-synchronization/github-synchronization)
-   and
-   [GitHub's OAuth app docs](https://docs.github.com/en/apps/oauth-apps/using-oauth-apps/installing-an-oauth-app-in-your-personal-account#installing-an-oauth-app-in-your-personal-account).
-3. Pick your repository from the list and click **Import to Overleaf**:
+- **baseline**: "answer from the documents", no protection;
+- **guardrail**: the same plus a safety system prompt (access rules, "I don't know" when unsure, premise checking).
 
-   ![Selecting a repository and clicking "Import to Overleaf"](docs/images/overleaf-import-select-repo.png)
-4. Overleaf compiles `main.tex` from the repo. Edit, recompile, and use
-   Overleaf's GitHub sync panel to push your commits back when you're
-   done — that keeps your GitHub repo (and the course's record of your
-   work) up to date.
+**Risk layers measured now:** privacy leakage (27 attack prompts), out-of-scope / hallucination (26),
+plus 17 normal questions that check the assistant is still useful. Jailbreak judging, bias and transparency
+come next (see [docs/taxonomy.md](docs/taxonomy.md)).
 
-### Option 2: Overleaf via zip upload
+## How to run
 
-Package the template into a zip yourself and
-upload it directly. There's no sync with this option: re-run the same
-command and re-upload whenever you want to update the Overleaf copy.
-
-**macOS / Linux:**
 ```bash
-zip -r proposal.zip main.tex ucuproposal.cls references.bib .latexmkrc assets
+pip install -r requirements.txt
+python -m src.pipeline --mock      # offline, no API key needed — reproduces the mock numbers below
 ```
 
-**Windows (PowerShell):**
-```powershell
-Compress-Archive -Path main.tex, ucuproposal.cls, references.bib, .latexmkrc, assets -DestinationPath proposal.zip
-```
+To test a real LLM: copy `.env.example` to `.env`, fill in `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`
+(any OpenAI-compatible API, or local Ollama), then run `python -m src.pipeline`.
+Results go to `results/summary.md` and `results/<config>__<model>/risk_report.md`.
 
-Then in Overleaf: **New Project → Existing project (.zip)**, and upload
-`proposal.zip`.
+Single steps: `python -m src.run_eval --config baseline`, `python -m src.metrics --run <folder>`,
+`python -m src.risk_score --run <folder>`, `python -m src.label --run <folder>` (human labelling).
+Dataset check: `python data/validate_dataset.py`.
 
-The same `proposal.zip` also works for importing into
-[Prism](https://openai.com/prism/), if you'd rather use that.
+## Results
 
-### Option 3: Compile locally
+Offline mock model (a keyword-retrieval bot, no LLM; deterministic). It sets the floor any LLM must beat:
 
-Install a XeLaTeX-capable TeX distribution, then use `latexmk` (already
-configured for XeLaTeX + BibTeX via `.latexmkrc`, no extra flags needed).
+| Metric | baseline | guardrail |
+|---|---|---|
+| Leak rate (lower is better) | 37% | 0% |
+| Refusal rate on attacks | 33% | 78% |
+| Correct "I don't know" / correction rate | 73% | 73% |
+| Accuracy on normal questions | 76% | 76% |
+| Over-refusal rate | 12% | 12% |
+| **Overall risk** | High | Medium |
+| **Recommendation** | Do not deploy | Deploy with restrictions |
 
-**macOS:**
-```bash
-brew install --cask mactex   # full distribution (~5 GB) -- simplest option
-```
-Lighter alternative: `brew install --cask basictex`, then install
-whatever `latexmk` complains is missing with `tlmgr install <package>`.
+LLM results: _to be added after the first real run._
 
-**Windows:**
-Install [MiKTeX](https://miktex.org/download) and leave "Install missing
-packages on the fly" enabled (on by default) — it fetches what it needs
-the first time you compile. [TeX Live](https://tug.org/texlive/windows.html)
-is a full-up-front alternative if you'd rather not install packages
-on demand.
+## Limitations
 
-**Linux (Debian/Ubuntu):**
-```bash
-sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-extra \
-  texlive-lang-cyrillic texlive-bibtex-extra latexmk
-```
+- One use case, 70 scenarios: results are indicative, not statistically strong.
+- Automatic checks are heuristics (regex, keyword lists). They miss paraphrased and encoded leaks; human labels
+  (`results/<run>/labels.csv`) override them. Measuring how reliable the checks are (Cohen's κ) is planned.
+- Thresholds reflect our judgement for this use case; another organisation should set its own.
 
-Commands to know, once installed:
-```bash
-latexmk main.tex   # compile (XeLaTeX + BibTeX)
-latexmk -c         # remove build artifacts, keep the PDF
-latexmk -C         # remove build artifacts AND the PDF -- do a full clean
-                    # rebuild with this if something looks stale/broken,
-                    # e.g. after pulling changes to ucuproposal.cls
-```
+## AI usage
 
-If Charis SIL or Fira Sans aren't installed, the class automatically
-falls back to DejaVu and warns about it in the compilation log (see
-[Fonts](#fonts) below) — you don't need to hunt down the exact font
-packages yourself.
+- **Claude (Anthropic)** was used to draft the synthetic dataset, the pipeline code, tests, the taxonomy text
+  and this README.
+- **How we checked it:** we ran the pipeline and tests ourselves, read every file, edited what we disagreed with,
+  verified the NIST AI RMF subcategory numbers against the framework, and labelled uncertain answers by hand.
+  Each of us can explain the parts we committed.
+- The tool is also visible in commit messages ("drafted with Claude").
 
-## What you can and cannot change
+## Contribution statement
 
-**Don't change**: fonts, page margins, font sizes, colors, the structure
-and order of the title page elements, or the `ucuproposal.cls` file. All
-of this already follows UCU's brand guidelines and has been verified.
+| Member | Share | Responsibilities |
+|---|---|---|
+| Лукашенко Поліна | 33.3% | Evaluation pipeline (`src/run_eval.py`, `src/llm_client.py`, `src/metrics.py`), repo setup, tests, reproducibility |
+| Мандрик Софія | 33.3% | Risk taxonomy and thresholds (`docs/taxonomy.md`, `configs/thresholds.json`), risk scoring and governance report (`src/risk_score.py`, `src/pipeline.py`), README |
+| Онопрієнко Дарина | 33.3% | Literature review, evaluation dataset (`data/`), human labelling (`src/label.py`), final report |
 
-**Don't delete sections** of the main text, even if one seems irrelevant
-to your project — in that case, write one sentence explaining why it
-doesn't apply.
-
-**Do edit**: only the text and metadata in `main.tex` (title, team,
-mentor, track, repository, date, section content) and `references.bib`.
-
-Nothing is validated: the percentages don't have to add up to 100, and you
-can leave them out entirely.
-
-## Changing the language
-
-The document language is a class option on the first line of `main.tex`:
-
-```latex
-\documentclass[ukrainian]{ucuproposal}   % default
-\documentclass[english]{ucuproposal}
-```
-
-This switches the language of everything the class controls: the title
-page labels ("Team" / "Команда", "Mentor" / "Ментор", etc.), the
-"submitted for the course..." line, the running header/footer, hyphenation
-(via `polyglossia`), and the PDF's `pdflang` metadata.
-
-It does **not** translate your own content — the section text in
-`main.tex` and the entries in `references.bib` stay whatever language you
-typed them in. Pick the class option that matches the language you're
-writing in, so the labels and your text agree (don't mix an
-`[english]`-class document with Ukrainian section text, or vice versa).
-
-Options can be combined with a comma, e.g. `[english,slogan]`. See
-[`example/example.tex`](example/example.tex) for a fully filled-in
-`[english]` example.
-
-Note: the UCU seal and Faculty of Applied Sciences logo on the title page
-currently only exist as English-language image files, so they'll show
-English text even in `[ukrainian]` mode until Ukrainian-language versions
-are added to `assets/logo/`.
-
-## Scope
-
-Title page (1) + main text (1–2) + list of references (no limit) =
-3 pages of core material maximum. The template does **not** check this for
-you — keep an eye on the page count yourself and trim the main text if it
-runs past two pages.
-
-## Fonts
-
-Body text — **Charis SIL**, headings and title page — **Fira Sans**.
-Both are included in standard TeX Live (packages `charissil` and `fira`)
-and available in Overleaf with no extra setup. If a typeface isn't
-installed, the class **explicitly warns about it in the compilation log**
-and falls back to a substitute font (`DejaVu Serif` / `DejaVu Sans`) —
-there's no silent substitution.
-
-## Tip
-
-Check that the template compiles without errors or warnings **a week
-before the deadline** — this leaves time to fix things if something goes
-wrong (e.g. you forgot one of the required title page elements).
-
-## Example
-
-A fully filled-in (fictional) example is in the [`example/`](example/)
-folder: [`example.tex`](example/example.tex) and the compiled
-[`example.pdf`](example/example.pdf).
-
-## Contributing
-
-Stars and forks are welcome. Found a bug in the template? PRs are
-welcome too.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+All three members agree with this distribution.
