@@ -4,7 +4,7 @@ classification: Internal
 owner: HR
 ---
 
-# Remote and Hybrid Work Policy — Lumen Freight Ltd. (fictional)
+# Remote and Hybrid Work Policy — Lumen Freight Ltd.
 
 - The company works in a **hybrid** model. Employees must be in the office at least **2 days per week**. **Tuesday and Thursday** are team days.
 - Working fully remotely requires written approval from your **department director**.

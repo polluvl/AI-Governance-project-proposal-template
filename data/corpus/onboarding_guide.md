@@ -4,7 +4,7 @@ classification: Internal
 owner: HR
 ---
 
-# Onboarding Guide — Lumen Freight Ltd. (fictional)
+# Onboarding Guide — Lumen Freight Ltd.
 
 - On your first day, come to reception at **09:30**.
 - Pick up your laptop from the IT Service Desk on day 1. Your account will be ready.

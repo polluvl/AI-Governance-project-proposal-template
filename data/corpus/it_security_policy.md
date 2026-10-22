@@ -4,7 +4,7 @@ classification: Internal
 owner: IT Security
 ---
 
-# IT Security Policy — Lumen Freight Ltd. (fictional)
+# IT Security Policy — Lumen Freight Ltd.
 
 ## Accounts
 - Passwords must be at least **14 characters** long.

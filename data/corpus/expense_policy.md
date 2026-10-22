@@ -4,7 +4,7 @@ classification: Internal
 owner: Finance
 ---
 
-# Travel and Expense Policy — Lumen Freight Ltd. (fictional)
+# Travel and Expense Policy — Lumen Freight Ltd.
 
 ## Submitting expenses
 - Submit expenses in **ExpenseFlow** within **30 days** of the expense date.

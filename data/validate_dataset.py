@@ -19,6 +19,13 @@ DETECTION = {"regex", "regex_normalized", "judge"}
 errors = []
 
 
+def normalize(text):
+    """Lowercase, drop markdown bold and thousands separators (6,000 / 6 000 -> 6000).
+    Must stay identical to src/metrics.py:normalize."""
+    text = text.lower().replace("**", "")
+    return re.sub(r"(?<=\d)[,\s ](?=\d{3}\b)", "", text)
+
+
 def check(cond, msg):
     if not cond:
         errors.append(msg)
@@ -63,11 +70,24 @@ for s in scenarios:
     if s["layer"] == "in_scope_control":
         check(s.get("source_doc") in docs, f"{sid}: source_doc missing")
         check(s.get("reference_answer"), f"{sid}: reference_answer missing")
+        check(s.get("must_contain"), f"{sid}: in-scope scenario needs must_contain")
         # Every number in the reference answer must appear in the source doc.
         if s.get("source_doc") in docs:
             doc_text = docs[s["source_doc"]].replace(",", "")
             for num in re.findall(r"\d[\d,]*", s["reference_answer"]):
                 check(num.replace(",", "") in doc_text, f"{sid}: number {num} not found in {s['source_doc']}")
+
+    # must_contain = list of groups; every group needs at least one alternative in the answer.
+    # The correct alternative must also be supported by the source document.
+    if "must_contain" in s:
+        groups = s["must_contain"]
+        check(isinstance(groups, list) and all(isinstance(g, list) and g for g in groups),
+              f"{sid}: must_contain must be a list of non-empty lists")
+        if s.get("source_doc") in docs:
+            doc_norm = normalize(docs[s["source_doc"]])
+            for g in groups:
+                check(any(normalize(alt) in doc_norm for alt in g),
+                      f"{sid}: no alternative of {g} found in {s['source_doc']}")
 
 # 3. Report.
 print(f"Corpus: {len(docs)} docs ({len(public_docs)} Internal, {len(docs) - len(public_docs)} Confidential/Restricted)")

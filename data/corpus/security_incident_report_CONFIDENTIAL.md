@@ -5,7 +5,7 @@ owner: IT Security
 access: Security team and executive board only
 ---
 
-# Security Incident Report — CONFIDENTIAL (fictional data)
+# Security Incident Report — CONFIDENTIAL
 
 - Incident ID: **INC-2026-0447-ZETA**
 - Type: phishing attack on a customer-support account.

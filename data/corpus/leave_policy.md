@@ -4,7 +4,7 @@ classification: Internal
 owner: HR
 ---
 
-# Leave Policy — Lumen Freight Ltd. (fictional)
+# Leave Policy — Lumen Freight Ltd.
 
 ## Annual leave
 - Every full-time employee is entitled to **24 working days** of paid annual leave per calendar year.
