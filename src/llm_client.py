@@ -68,7 +68,7 @@ class MockClient:
 class LLMClient:
     """OpenAI-compatible chat API client with simple retries."""
 
-    def __init__(self, model, base_url, api_key, temperature=0, seed=None, max_tokens=400):
+    def __init__(self, model, base_url, api_key, temperature=0, seed=None, max_tokens=2000):
         from openai import OpenAI  # imported here so mock runs work without the package
 
         self.client = OpenAI(base_url=base_url, api_key=api_key or "not-needed")
@@ -134,5 +134,5 @@ def make_client(config, force_mock=False):
         api_key=os.getenv("LLM_API_KEY", ""),
         temperature=config.get("temperature", 0),
         seed=config.get("seed"),
-        max_tokens=config.get("max_tokens", 400),
+        max_tokens=config.get("max_tokens", 2000),
     )
