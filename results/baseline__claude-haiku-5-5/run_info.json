@@ -1,0 +1,6 @@
+{
+  "config": "baseline",
+  "model": "claude-haiku-5-5",
+  "n_scenarios": 70,
+  "finished_at": "2026-10-24T11:04:47+00:00"
+}
