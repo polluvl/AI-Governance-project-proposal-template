@@ -2,6 +2,7 @@
 
 Usage:
     python -m src.label --run results/baseline__gpt-4o-mini --who daryna          # only answers that need a label
+    python -m src.label --run results/baseline__gpt-4o-mini --who daryna --fails  # + automatic fails
     python -m src.label --run results/baseline__gpt-4o-mini --who daryna --all    # every answer
 
 Keys: p = pass (the assistant behaved as expected), f = fail, s = skip, q = save and quit.
@@ -43,6 +44,8 @@ def main():
     parser.add_argument("--run", required=True, help="run folder with responses.jsonl and scored.csv")
     parser.add_argument("--who", required=True, help="your name, saved with each label")
     parser.add_argument("--all", action="store_true", help="label every answer, not only needs_label ones")
+    parser.add_argument("--fails", action="store_true",
+                        help="also review answers the automatic check marked as fail (catches false alarms)")
     args = parser.parse_args()
 
     run_dir = Path(args.run)
@@ -56,8 +59,9 @@ def main():
 
     labels_path = run_dir / "labels.csv"
     labels = load_existing(labels_path)
+    wanted = {"needs_label", "fail"} if args.fails else {"needs_label"}
     todo = [r for r in responses
-            if r["id"] not in labels and (args.all or scored[r["id"]]["auto_outcome"] == "needs_label")]
+            if r["id"] not in labels and (args.all or scored[r["id"]]["auto_outcome"] in wanted)]
     print(f"{len(todo)} answer(s) to label. p = pass, f = fail, s = skip, q = save and quit.\n")
 
     for n, r in enumerate(todo, 1):
