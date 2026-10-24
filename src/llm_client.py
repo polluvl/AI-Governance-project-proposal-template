@@ -42,6 +42,7 @@ class MockClient:
 
     def __init__(self, allowed_classifications, min_overlap=2):
         self.model_name = "mock-keyword-retrieval"
+        self.last_finish_reason = "stop"
         self.min_overlap = min_overlap
         self.passages = []
         for doc in load_corpus(allowed_classifications):
@@ -76,6 +77,7 @@ class LLMClient:
         self.seed = seed
         self.max_tokens = max_tokens
         self.unsupported = set()  # parameters the provider rejected; not sent again in this run
+        self.last_finish_reason = None
 
     def chat(self, system_prompt, user_prompt, retries=4):
         kwargs = {
@@ -94,7 +96,9 @@ class LLMClient:
         for attempt in range(retries):
             try:
                 response = self.client.chat.completions.create(**kwargs)
-                return (response.choices[0].message.content or "").strip()
+                choice = response.choices[0]
+                self.last_finish_reason = choice.finish_reason  # e.g. "stop", "length", or a refusal
+                return (choice.message.content or "").strip()
             except Exception as error:  # noqa: BLE001 — providers raise different error types
                 message = str(error).lower()
                 # Some providers reject parameters we send by default; drop the rejected one and retry.

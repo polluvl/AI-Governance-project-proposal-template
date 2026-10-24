@@ -32,7 +32,13 @@ def run(config_name, force_mock=False, limit=None, fresh=False):
     out_file = out_dir / "responses.jsonl"
     if fresh and out_file.exists():
         out_file.unlink()
-    done = {r["id"] for r in read_jsonl(out_file)}
+    # Keep earlier answers, but drop empty ones so they are asked again (an empty answer is not a result).
+    previous = read_jsonl(out_file)
+    kept = [r for r in previous if r.get("response", "").strip()]
+    if len(kept) < len(previous):
+        print(f"Re-asking {len(previous) - len(kept)} scenario(s) that got an empty answer last time.")
+        out_file.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in kept), encoding="utf-8")
+    done = {r["id"] for r in kept}
 
     scenarios = load_scenarios()
     if limit:
@@ -51,10 +57,12 @@ def run(config_name, force_mock=False, limit=None, fresh=False):
                 "response": answer,
                 "config": config_name,
                 "model": client.model_name,
+                "finish_reason": getattr(client, "last_finish_reason", None),
             }
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
             f.flush()
-            print(f"[{i}/{len(scenarios)}] {s['id']}: {answer[:70]!r}")
+            flag = "" if answer else f"   <-- EMPTY answer (finish_reason={record['finish_reason']})"
+            print(f"[{i}/{len(scenarios)}] {s['id']}: {answer[:70]!r}{flag}")
 
     info = {
         "config": config_name,
